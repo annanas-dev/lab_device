@@ -30,8 +30,8 @@ const float POSSIBLE_ERROR = 0.01;
 class Stream
 {
 private:
-    double mass_flow; ///< The mass flow rate of the stream.
-    string name;      ///< The name of the stream.
+    double mass_flow; ///< Массовый расход потока.
+    string name;      ///< Имя потока. 
 
 public:
     /**
@@ -57,7 +57,7 @@ public:
     /**
      * @brief Устанавливает массовый расход потока.
      * @param m Значение массового расхода.
-     * @post getMassFlow() == m.
+     * * @post getMassFlow() == m.
      */
     void setMassFlow(double m){mass_flow=m;}
 
@@ -76,29 +76,39 @@ public:
     void print() { cout << "Stream " << getName() << " flow = " << getMassFlow() << endl; }
 };
 
+
 /**
  * @class Device
- * @brief Represents a device that manipulates chemical streams.
+ * @brief Абстрактное устройство с набором входных и выходных потоков.
+ * @details Хранит коллекции входов/выходов и ограничивает их количество.
+ *          Конкретные устройства должны реализовать логика перерасчёта выходных потоков на основе входных
+ *          в методе updateOutputs().
+ * @note Поля @c inputAmount и @c outputAmount должны быть инициализированы
+ *       (обычно в конструкторе наследника) до вызовов addInput()/addOutput().
  */
 class Device
 {
 protected:
-    vector<shared_ptr<Stream>> inputs;  ///< Input streams connected to the device.
-    vector<shared_ptr<Stream>> outputs; ///< Output streams produced by the device.
-    int inputAmount;
-    int outputAmount;
+    vector<shared_ptr<Stream>> inputs;  ///< Входные потоки, подключённые к устройству.
+    vector<shared_ptr<Stream>> outputs; ///< Выходные потоки, формируемые устройством.
+    int inputAmount; ///< Максимально допустимое количество входных потоков.
+    int outputAmount; ///< Максимально допустимое количество выходных потоков.
+
 public:
     /**
-     * @brief Add an input stream to the device.
-     * @param s A shared pointer to the input stream.
+     * @brief Добавляет входной поток.
+     * @param s Указатель на поток, который нужно подключить ко входу.
+     * @throw const char* Бросает строку "INPUT STREAM LIMIT!", если достигнут лимит входов.
      */
     void addInput(shared_ptr<Stream> s){
       if(inputs.size() < inputAmount) inputs.push_back(s);
       else throw"INPUT STREAM LIMIT!";
     }
+
     /**
-     * @brief Add an output stream to the device.
-     * @param s A shared pointer to the output stream.
+     * @brief Добавляет выходной поток.
+     * @param s Указатель на поток, который устройство будет наполнять как выход.
+     * @throw const char* Бросает строку "OUTPUT STREAM LIMIT!", если достигнут лимит выходов.
      */
     void addOutput(shared_ptr<Stream> s){
       if(outputs.size() < outputAmount) outputs.push_back(s);
@@ -106,10 +116,28 @@ public:
     }
 
     /**
-     * @brief Update the output streams of the device (to be implemented by derived classes).
+     * @brief Возвращает список входных потоков.
+     * @return Копия вектора @c vector<shared_ptr<Stream>> с текущими входами.
+     * @note Возврат по значению: вызывающий получает копию контейнера.
+     */
+    vector<shared_ptr<Stream>> getInputs() const { return inputs; }
+    
+    /**
+     * @brief Возвращает список выходных потоков.
+     * @return Копия вектора @c vector<shared_ptr<Stream>> с текущими выходами.
+     * @note Возврат по значению: вызывающий получает копию контейнера.
+     */
+    vector<shared_ptr<Stream>> getOutputs() const { return outputs; }
+
+    /**
+     * @brief Пересчитывает выходные потоки на основе входных.
+     * @details Виртуальная функция: конкретное устройство определяет,
+     *          как преобразуются входы в выходы.
+     * @remark Делает класс абстрактным; экземпляры @c Device напрямую не создаются.
      */
     virtual void updateOutputs() = 0;
 };
+
 
 class Mixer: public Device
 {
@@ -148,6 +176,25 @@ class Mixer: public Device
         }
       }
 };
+
+
+class Reactor : public Device{
+public:
+    Reactor(bool isDoubleReactor) {
+        inputAmount = 1;
+        if (isDoubleReactor) outputAmount = 2;
+        else inputAmount = 1;
+    }
+    
+    void updateOutputs() override{
+        double inputMass = inputs.at(0) -> getMassFlow();
+            for(int i = 0; i < outputAmount; i++){
+            double outputLocal = inputMass * (1/outputAmount);
+            outputs.at(i) -> setMassFlow(outputLocal);
+        }
+    }
+};
+
 
 void shouldSetOutputsCorrectlyWithOneOutput() {
     streamcounter=0;
@@ -228,22 +275,6 @@ void shouldCorrectInputs() {
     cout << "Test 3 failed"s << endl;
 }
 
-class Reactor : public Device{
-public:
-    Reactor(bool isDoubleReactor) {
-        inputAmount = 1;
-        if (isDoubleReactor) outputAmount = 2;
-        else inputAmount = 1;
-    }
-    
-    void updateOutputs() override{
-        double inputMass = inputs.at(0) -> getMassFlow();
-            for(int i = 0; i < outputAmount; i++){
-            double outputLocal = inputMass * (1/outputAmount);
-            outputs.at(i) -> setMassFlow(outputLocal);
-        }
-    }
-};
 
 void testTooManyOutputStreams(){
     streamcounter=0;
