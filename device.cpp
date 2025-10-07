@@ -201,6 +201,10 @@ public:
 };
 
 
+/**
+ * @test
+ * @brief Проверяет, что Mixer с одним выходом устанавливает суммарный расход входов на выход.
+ */
 void shouldSetOutputsCorrectlyWithOneOutput() {
     streamcounter=0;
     Mixer d1 = Mixer(2);
