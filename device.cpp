@@ -217,10 +217,10 @@ void shouldSetOutputsCorrectlyWithOneOutput() {
 
     d1.updateOutputs();
 
-    if (abs(s3->getMassFlow()) - 15 < POSSIBLE_ERROR) {
-      cout << "Test 1 passed"s << endl;
+    if (abs(s3->getMassFlow() - 15) < POSSIBLE_ERROR) {
+      cout << "Mixer Test 1 passed"s << endl;
     } else {
-      cout << "Test 1 failed"s << endl;
+      cout << "Mixer Test 1 failed"s << endl;
     }
 }
 
