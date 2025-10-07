@@ -1,9 +1,3 @@
-/**
- * @file main.cpp
- *
- * @brief A C++ program demonstrating the usage of the Stream and Device classes.
- */
-
 #include <iostream>
 #include <string>
 #include <vector>
@@ -17,9 +11,21 @@ int streamcounter; ///< Global variable to keep track of stream creation.
 const int MIXER_OUTPUTS = 1;
 const float POSSIBLE_ERROR = 0.01;
 
+
 /**
  * @class Stream
- * @brief Represents a chemical stream with a name and mass flow.
+ * @brief Представляет материальный поток с именем и массовым расходом.
+ * @details
+ *  - Имя задаётся явным вызовом setName() либо автоматически формируется в конструкторе как "s<номер>".
+ *  - Массовый расход задаётся методом setMassFlow() и считывается через getMassFlow().
+ *  - Метод print() выводит краткую информацию о потоке в стандартный вывод.
+ *
+ * @par Пример
+ * @code
+ * Stream s(1);            // имя -> "s1"
+ * s.setMassFlow(10.0);    // устанавливаем расход
+ * s.print();              // Вывод: Stream s1 flow = 10
+ * @endcode
  */
 class Stream
 {
@@ -29,37 +35,43 @@ private:
 
 public:
     /**
-     * @brief Constructor to create a Stream with a unique name.
-     * @param s An integer used to generate a unique name for the stream.
+     * @brief Конструктор, создающий поток с именем вида "s<номер>".
+     * @param s Порядковый номер потока; используется для формирования имени.
      */
     Stream(int s){setName("s"+std::to_string(s));}
 
     /**
-     * @brief Set the name of the stream.
-     * @param s The new name for the stream.
+     * @brief Устанавливает имя потока.
+     * @param s Новое имя потока.
+     * * @post getName() == s.
      */
     void setName(string s){name=s;}
 
     /**
-     * @brief Get the name of the stream.
-     * @return The name of the stream.
+     * @brief Возвращает имя потока.
+     * @return Текущее имя.
+     * @note Метод возвращает копию строки.
      */
     string getName(){return name;}
 
     /**
-     * @brief Set the mass flow rate of the stream.
-     * @param m The new mass flow rate value.
+     * @brief Устанавливает массовый расход потока.
+     * @param m Значение массового расхода.
+     * @post getMassFlow() == m.
      */
     void setMassFlow(double m){mass_flow=m;}
 
     /**
-     * @brief Get the mass flow rate of the stream.
-     * @return The mass flow rate of the stream.
+     * @brief Возвращает массовый расход потока.
+     * @return Текущее значение массового расхода.
+     * @note Метод помечен как @c const.
      */
     double getMassFlow() const {return mass_flow;}
 
     /**
-     * @brief Print information about the stream.
+     * @brief Печатает краткую информацию о потоке в стандартный вывод.
+     * @details Формат строки: @c "Stream <имя> flow = <значение>\\n".
+     *          Используется @c cout и @c endl.
      */
     void print() { cout << "Stream " << getName() << " flow = " << getMassFlow() << endl; }
 };
