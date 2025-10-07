@@ -293,10 +293,14 @@ void shouldCorrectInputs() {
 }
 
 
+/**
+ * @test
+ * @brief Проверяет, что Reactor не допускает добавление второго выходного потока при 1 разрешённом выходе.
+ */
 void testTooManyOutputStreams(){
     streamcounter=0;
     
-    Reactor dl = new Reactor(false);
+    Reactor dl(false);
     
     shared_ptr<Stream> s1(new Stream(++streamcounter));
     shared_ptr<Stream> s2(new Stream(++streamcounter));
@@ -307,42 +311,53 @@ void testTooManyOutputStreams(){
     dl.addOutput(s2);
     try{
         dl.addOutput(s3);
-    } catch(const string ex){
-         if (ex == "OUTPUT STREAM LIMIT!")
-            cout << "Test 1 passed" << endl;
+    } catch (const char* ex) {
+         if (string(ex)  == "OUTPUT STREAM LIMIT!")
+            cout << "Reactor Test 1 passed" << endl;
 
         return;
     }
     
-     cout << "Test 1 failed" << endl;
+     cout << "Reactor Test 1 failed" << endl;
 }
 
+
+/**
+ * @test
+ * @brief Проверяет, что Reactor запрещает добавление второго входного потока при лимите в один вход.
+ */
 void testTooManyInputStreams(){
-    streamcounter=0;
+    streamcounter = 0;
     
-    Reactor dl = new Reactor(false);
+    Reactor dl(false);
     
     shared_ptr<Stream> s1(new Stream(++streamcounter));
-    shared_ptr<Stream> s3(new Stream(++streamcounter));
+    shared_ptr<Stream> s2(new Stream(++streamcounter));
     s1->setMassFlow(10.0);
-    s2->setMassFlow(5.0);
-    dl.addInput(s1);
-    try{
-        dl.addInput(s3);
-    } catch(const string ex){
-         if (ex == "INPUT STREAM LIMIT!")
-            cout << "Test 2 passed" << endl;
 
-        return;
+    dl.addInput(s1);
+    
+    try {
+        dl.addInput(s2); 
+    } catch (const char* ex) { 
+        if (string(ex) == "INPUT STREAM LIMIT!") {
+            cout << "Reactor Test 2 passed" << endl;
+            return;
+        }
     }
     
-     cout << "Test 2 failed"s << endl;
+    cout << "Reactor Test 2 failed" << endl;
 }
 
+
+/**
+ * @test
+ * @brief Проверяет закон сохранения потока для Reactor с двумя выходами.
+ */
 void testInputEqualOutput(){
         streamcounter=0;
     
-    Reactor dl = new Reactor(true);
+    Reactor dl(true);
     
     shared_ptr<Stream> s1(new Stream(++streamcounter));
     shared_ptr<Stream> s2(new Stream(++streamcounter));
@@ -355,10 +370,16 @@ void testInputEqualOutput(){
     
     dl.updateOutputs();
     
-    if(dl.outputs.at(0).getMassFlow + dl.outputs.at(1).getMassFlow == dl.inputs.at(0).getMassFlow)
-        cout << "Test 3 passed" << endl;
+    const auto outs = dl.getOutputs();
+    const auto ins  = dl.getInputs();
+
+    const double sum_out = outs.at(0)->getMassFlow() + outs.at(1)->getMassFlow();
+    const double in      = ins.at(0)->getMassFlow();
+
+    if (std::abs(sum_out - in) < POSSIBLE_ERROR)
+        std::cout << "Reactor Test 3 passed\n";
     else
-        cout << "Test 3 failed" << endl;
+        std::cout << "Reactor Test 3 failed\n";
 }
 
 void tests(){
