@@ -15,17 +15,6 @@ const float POSSIBLE_ERROR = 0.01;
 /**
  * @class Stream
  * @brief Представляет материальный поток с именем и массовым расходом.
- * @details
- *  - Имя задаётся явным вызовом setName() либо автоматически формируется в конструкторе как "s<номер>".
- *  - Массовый расход задаётся методом setMassFlow() и считывается через getMassFlow().
- *  - Метод print() выводит краткую информацию о потоке в стандартный вывод.
- *
- * @par Пример
- * @code
- * Stream s(1);            // имя -> "s1"
- * s.setMassFlow(10.0);    // устанавливаем расход
- * s.print();              // Вывод: Stream s1 flow = 10
- * @endcode
  */
 class Stream
 {
@@ -43,35 +32,29 @@ public:
     /**
      * @brief Устанавливает имя потока.
      * @param s Новое имя потока.
-     * * @post getName() == s.
      */
     void setName(string s){name=s;}
 
     /**
      * @brief Возвращает имя потока.
      * @return Текущее имя.
-     * @note Метод возвращает копию строки.
      */
     string getName(){return name;}
 
     /**
      * @brief Устанавливает массовый расход потока.
      * @param m Значение массового расхода.
-     * * @post getMassFlow() == m.
      */
     void setMassFlow(double m){mass_flow=m;}
 
     /**
      * @brief Возвращает массовый расход потока.
      * @return Текущее значение массового расхода.
-     * @note Метод помечен как @c const.
      */
     double getMassFlow() const {return mass_flow;}
 
     /**
      * @brief Печатает краткую информацию о потоке в стандартный вывод.
-     * @details Формат строки: @c "Stream <имя> flow = <значение>\\n".
-     *          Используется @c cout и @c endl.
      */
     void print() { cout << "Stream " << getName() << " flow = " << getMassFlow() << endl; }
 };
@@ -80,11 +63,6 @@ public:
 /**
  * @class Device
  * @brief Абстрактное устройство с набором входных и выходных потоков.
- * @details Хранит коллекции входов/выходов и ограничивает их количество.
- *          Конкретные устройства должны реализовать логика перерасчёта выходных потоков на основе входных
- *          в методе updateOutputs().
- * @note Поля @c inputAmount и @c outputAmount должны быть инициализированы
- *       (обычно в конструкторе наследника) до вызовов addInput()/addOutput().
  */
 class Device
 {
@@ -98,7 +76,6 @@ public:
     /**
      * @brief Добавляет входной поток.
      * @param s Указатель на поток, который нужно подключить ко входу.
-     * @throw const char* Бросает строку "INPUT STREAM LIMIT!", если достигнут лимит входов.
      */
     void addInput(shared_ptr<Stream> s){
       if(inputs.size() < inputAmount) inputs.push_back(s);
@@ -108,7 +85,6 @@ public:
     /**
      * @brief Добавляет выходной поток.
      * @param s Указатель на поток, который устройство будет наполнять как выход.
-     * @throw const char* Бросает строку "OUTPUT STREAM LIMIT!", если достигнут лимит выходов.
      */
     void addOutput(shared_ptr<Stream> s){
       if(outputs.size() < outputAmount) outputs.push_back(s);
@@ -118,63 +94,81 @@ public:
     /**
      * @brief Возвращает список входных потоков.
      * @return Копия вектора @c vector<shared_ptr<Stream>> с текущими входами.
-     * @note Возврат по значению: вызывающий получает копию контейнера.
      */
     vector<shared_ptr<Stream>> getInputs() const { return inputs; }
     
     /**
      * @brief Возвращает список выходных потоков.
      * @return Копия вектора @c vector<shared_ptr<Stream>> с текущими выходами.
-     * @note Возврат по значению: вызывающий получает копию контейнера.
      */
     vector<shared_ptr<Stream>> getOutputs() const { return outputs; }
 
     /**
      * @brief Пересчитывает выходные потоки на основе входных.
-     * @details Виртуальная функция: конкретное устройство определяет,
-     *          как преобразуются входы в выходы.
-     * @remark Делает класс абстрактным; экземпляры @c Device напрямую не создаются.
      */
     virtual void updateOutputs() = 0;
 };
 
 
+/**
+ * @class Mixer
+ * @brief Устройство-миксер: суммирует расходы входных потоков и распределяет по выходам.
+ */
 class Mixer: public Device
 {
-    private:
-      int _inputs_count = 0;
-    public:
-      Mixer(int inputs_count): Device() {
+private:
+    int _inputs_count = 0; ///< Разрешённое количество входных потоков, задаётся в конструкторе.
+
+public:
+    /**
+     * @brief Создаёт миксер с заданным количеством входов.
+     * @param inputs_count Максимально допустимое число входных потоков.
+     */
+    Mixer(int inputs_count): Device() {
         _inputs_count = inputs_count;
-      }
-      void addInput(shared_ptr<Stream> s) {
+    }
+
+    /**
+     * @brief Добавляет входной поток.
+     * @param s Умный указатель на поток @ref Stream для подключения ко входу.
+     */
+    void addInput(shared_ptr<Stream> s) {
         if (inputs.size() == _inputs_count) {
-          throw "Too much inputs"s;
+            throw "Too much inputs"s;
         }
         inputs.push_back(s);
-      }
-      void addOutput(shared_ptr<Stream> s) {
+    }
+
+    /**
+     * @brief Добавляет выходной поток.
+     * @param s Умный указатель на поток @ref Stream, который будет заполнен на выходе.
+     */
+    void addOutput(shared_ptr<Stream> s) {
         if (outputs.size() == MIXER_OUTPUTS) {
-          throw "Too much outputs"s;
+            throw "Too much outputs"s;
         }
         outputs.push_back(s);
-      }
-      void updateOutputs() override {
+    }
+
+    /**
+     * @brief Пересчитывает выходные потоки на основе входных.
+     */
+    void updateOutputs() override {
         double sum_mass_flow = 0;
         for (const auto& input_stream : inputs) {
-          sum_mass_flow += input_stream -> getMassFlow();
+            sum_mass_flow += input_stream->getMassFlow();
         }
 
         if (outputs.empty()) {
-          throw "Should set outputs before update"s;
+            throw "Should set outputs before update"s;
         }
 
-        double output_mass = sum_mass_flow / outputs.size(); // divide 0
+        double output_mass = sum_mass_flow / outputs.size();
 
         for (auto& output_stream : outputs) {
-          output_stream -> setMassFlow(output_mass);
+            output_stream->setMassFlow(output_mass);
         }
-      }
+    }
 };
 
 
