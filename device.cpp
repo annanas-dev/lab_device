@@ -382,6 +382,10 @@ void testInputEqualOutput(){
         std::cout << "Reactor Test 3 failed\n";
 }
 
+/**
+ * @test
+ * @brief Запускает набор тестов для Mixer и Reactor.
+ */
 void tests(){
     testInputEqualOutput();
     testTooManyOutputStreams();
@@ -393,8 +397,8 @@ void tests(){
 }
 
 /**
- * @brief The entry point of the program.
- * @return 0 on successful execution.
+ * @brief Точка входа в программу.
+ * @return 0 при успешном завершении.
  */
 int main()
 {
