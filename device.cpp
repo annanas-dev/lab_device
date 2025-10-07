@@ -228,6 +228,10 @@ void shouldSetOutputsCorrectlyWithOneOutput() {
     }
 }
 
+/**
+ * @test
+ * @brief Проверяет, что Mixer не допускает больше выходов, чем разрешено.
+ */
 void shouldCorrectOutputs() {
     streamcounter=0;
     Mixer d1 = Mixer(2);
@@ -256,6 +260,10 @@ void shouldCorrectOutputs() {
     cout << "Test 2 failed"s << endl;
 }
 
+/**
+ * @test
+ * @brief Проверяет, что Mixer запрещает добавлять больше входов, чем разрешено.
+ */
 void shouldCorrectInputs() {
     streamcounter=0;
     Mixer d1 = Mixer(2);
