@@ -172,18 +172,29 @@ public:
 };
 
 
+/**
+ * @class Reactor
+ * @brief Реактор с одним входом и 1–2 выходами, равномерно распределяющий расход.
+ */
 class Reactor : public Device{
 public:
+    /**
+     * @brief Конструктор: настраивает число выходов (1 или 2) при единственном входе.
+     * @param isDoubleReactor Если @c true — два выхода, иначе один.
+     */
     Reactor(bool isDoubleReactor) {
         inputAmount = 1;
         if (isDoubleReactor) outputAmount = 2;
-        else inputAmount = 1;
+        else outputAmount = 1;
     }
     
+    /**
+     * @brief Перерасчёт выходных потоков из входного.
+     */
     void updateOutputs() override{
         double inputMass = inputs.at(0) -> getMassFlow();
             for(int i = 0; i < outputAmount; i++){
-            double outputLocal = inputMass * (1/outputAmount);
+            double outputLocal = inputMass * (1.0/outputAmount);
             outputs.at(i) -> setMassFlow(outputLocal);
         }
     }
