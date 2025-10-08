@@ -2,39 +2,47 @@ name: CI
 
 on:
   push:
-    branches: [ "main", "student", "**" ]
+    branches: [ "**" ]          # запускаем на любой ветке (main/student и т.д.)
     paths-ignore:
-      - "badges/**"          # не перезапускаем CI на автокоммит бейджа
+      - "badges/**"             # автокоммит бейджа не триггерит новый запуск
   pull_request:
 
+# нужно, чтобы job мог закоммитить badges/coverage.svg обратно в репозиторий
 permissions:
-  contents: write            # нужно, чтобы коммитить badges/coverage.svg
+  contents: write
 
 jobs:
+  # --- Сборка и прогон GoogleTest на Windows (MSVC) ---
   test-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Configure (MSVC x64)
         run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release
+
       - name: Build device_tests
         run: cmake --build build --config Release --target device_tests -- /m
+
       - name: Run ctest
         run: ctest --test-dir build -C Release --output-on-failure
 
+  # --- Подсчёт покрытия и генерация бейджа на Linux (gcc + gcovr) ---
   coverage-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install tools
+      - name: Install gcovr & genbadge
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc g++ lcov
           python3 -m pip install --upgrade pip
           pip3 install gcovr genbadge[all]
 
-      # сборка с покрытием
+      # Сборка с флагами покрытия
       - name: Configure with coverage flags (GCC)
         run: |
           cmake -S . -B build \
@@ -49,7 +57,7 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build -C Debug --output-on-failure
 
-      # считаем покрытие ТОЛЬКО по твоему коду и делаем бейдж
+      # Считаем покрытие ТОЛЬКО по твоему исходнику и делаем бейдж
       - name: Generate coverage report and badge
         run: |
           gcovr -r . \
@@ -59,22 +67,26 @@ jobs:
           mkdir -p badges
           genbadge coverage -i coverage.xml -o badges/coverage.svg
 
-      - name: Upload HTML coverage (optional)
+      # (опционально) HTML-отчёт как артефакт рана
+      - name: Generate HTML coverage report
         run: |
-          gcovr -r . -e "build/.*" -e ".*_deps/.*" -e "tests/.*" -f "device\.cpp" \
+          gcovr -r . \
+            -e "build/.*" -e ".*_deps/.*" -e "tests/.*" \
+            -f "device\.cpp" \
             --html --html-details -o coverage.html
-        # скачиваемый артефакт в ранe
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-html
           path: coverage.html
 
-      # автокоммит бейджа при push
+      # Автокоммит бейджа при push
       - name: Commit badge
         if: github.event_name == 'push'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add badges/coverage.svg
-          git commit -m "chore(ci): update coverage badge [skip ci]" || echo "no changes"
+          git commit -m "chore(ci): update coverage badge [skip ci]" || echo "No changes"
           git push
