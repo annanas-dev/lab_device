@@ -5,5 +5,5 @@ FILE_PATTERNS    = *.h *.hpp *.hh *.cpp
 RECURSIVE        = YES
 GENERATE_HTML    = YES
 GENERATE_LATEX   = NO
-HAVE_DOT         = NO     
+HAVE_DOT         = NO    
 JAVADOC_AUTOBRIEF= YES
