@@ -1,26 +1,74 @@
 name: CI
 
 on:
-  push:            # триггер на каждый пуш в любую ветку
+  push:
     branches: [ "**" ]
-  pull_request:    # и на PR — полезно для проверок
+    paths-ignore:
+      - "badges/**"     # ← пушим бейдж, но не триггерим повторный прогон
+  pull_request:
+
+# нужно, чтобы job мог закоммитить SVG обратно в репозиторий
+permissions:
+  contents: write
 
 jobs:
+  # Твои обычные тесты на Windows (MSVC)
   test-windows:
     runs-on: windows-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Конфигурируем CMake под MSVC x64
-      - name: Configure CMake (MSVC x64)
+      - name: Configure (MSVC x64)
         run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release
 
-      # Сборка только цели с тестами (быстрее)
       - name: Build tests
         run: cmake --build build --config Release --target device_tests -- /m
 
-      # Прогон тестов. Если используешь gtest_discover_tests, добавь DISCOVERY_MODE PRE_TEST в CMakeLists.
       - name: Run ctest
         run: ctest --test-dir build -C Release --output-on-failure
+
+  # Подсчёт покрытия + бейдж на Linux (gcc + gcov)
+  coverage-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gcovr & genbadge
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc g++ lcov
+          python3 -m pip install --upgrade pip
+          pip3 install gcovr genbadge[all]
+
+      # Сборка с флагами покрытия
+      - name: Configure with coverage flags
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="--coverage" \
+            -DCMAKE_C_FLAGS="--coverage" \
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage"
+
+      - name: Build tests
+        run: cmake --build build --config Debug --target device_tests -j 2
+
+      - name: Run tests
+        run: ctest --test-dir build -C Debug --output-on-failure
+
+      # Генерим отчёт покрытия и бейдж
+      - name: Generate coverage report and badge
+        run: |
+          # исключаем build/ и внешние зависимости
+          gcovr -r . -e "build/.*" -e ".*_deps/.*" --xml-pretty -o coverage.xml
+          mkdir -p badges
+          genbadge coverage -i coverage.xml -o badges/coverage.svg
+
+      # Коммитим бейдж обратно при push (для PR просто считаем, но не коммитим)
+      - name: Commit badge to repo
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add badges/coverage.svg
+          git commit -m "chore(ci): update coverage badge [skip ci]" || echo "No changes to commit"
+          git push
