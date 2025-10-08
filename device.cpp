@@ -150,6 +150,7 @@ public:
         outputs.push_back(s);
     }
 
+    
     /**
      * @brief Пересчитывает выходные потоки на основе входных.
      */
@@ -200,7 +201,7 @@ public:
     }
 };
 
-
+#ifndef UNIT_TESTS
 /**
  * @test
  * @brief Проверяет, что Mixer с одним выходом устанавливает суммарный расход входов на выход.
@@ -430,3 +431,5 @@ int main()
 
     return 0;
 }
+#endif // UNIT_TESTS
+

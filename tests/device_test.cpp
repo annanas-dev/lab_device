@@ -7,25 +7,6 @@
 
 static constexpr double EPS = 1e-2;
 
-// Мой тестик
-TEST(MixerGuards, NoOutputsExceptionMessage) {
-    streamcounter = 0;
-    Mixer mixer(1);
-    shared_ptr<Stream> s1(new Stream(++streamcounter));
-    s1->setMassFlow(2.0);
-    mixer.addInput(s1);
-
-    try {
-        mixer.updateOutputs();
-        FAIL() << "exception is expected";
-    } catch (const std::string& ex) {
-        EXPECT_EQ(ex, "Should set outputs before update");
-    } catch (...) {
-        FAIL() << "another mistake";
-    }
-}
-
-
 
 // ---------- Stream ----------
 TEST(StreamUnit, AutoNameFromIndex) {
@@ -81,6 +62,24 @@ TEST(MixerIntegration, NoInputsGivesZeroAtOutput) {
     mx.addOutput(out);
     mx.updateOutputs();                                 // суммирование по пустому списку
     EXPECT_NEAR(out->getMassFlow(), 0.0, EPS);
+}
+
+// Мой тестик
+TEST(MixerGuards, NoOutputsExceptionMessage) {
+    streamcounter = 0;
+    Mixer mixer(1);
+    shared_ptr<Stream> s1(new Stream(++streamcounter));
+    s1->setMassFlow(2.0);
+    mixer.addInput(s1);
+
+    try {
+        mixer.updateOutputs();
+        FAIL() << "exception is expected";
+    } catch (const std::string& ex) {
+        EXPECT_EQ(ex, "Should set outputs before update");
+    } catch (...) {
+        FAIL() << "another mistake";
+    }
 }
 
 TEST(MixerGuards, TooManyInputsThrowsStdString) {
