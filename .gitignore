@@ -1,1 +1,8 @@
-.vscode/
+/build/
+/.vscode/
+/.vs/
+CMakeFiles/
+CMakeCache.txt
+*.user
+*.sln
+*.vcxproj*
