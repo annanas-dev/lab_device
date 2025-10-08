@@ -2,46 +2,40 @@ name: CI
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ "main", "student", "**" ]
     paths-ignore:
-      - "badges/**"     # ← пушим бейдж, но не триггерим повторный прогон
+      - "badges/**"          # не перезапускаем CI на автокоммит бейджа
   pull_request:
 
-# нужно, чтобы job мог закоммитить SVG обратно в репозиторий
 permissions:
-  contents: write
+  contents: write            # нужно, чтобы коммитить badges/coverage.svg
 
 jobs:
-  # Твои обычные тесты на Windows (MSVC)
   test-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Configure (MSVC x64)
         run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build tests
+      - name: Build device_tests
         run: cmake --build build --config Release --target device_tests -- /m
-
       - name: Run ctest
         run: ctest --test-dir build -C Release --output-on-failure
 
-  # Подсчёт покрытия + бейдж на Linux (gcc + gcov)
   coverage-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install gcovr & genbadge
+      - name: Install tools
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc g++ lcov
           python3 -m pip install --upgrade pip
           pip3 install gcovr genbadge[all]
 
-      # Сборка с флагами покрытия
-      - name: Configure with coverage flags
+      # сборка с покрытием
+      - name: Configure with coverage flags (GCC)
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Debug \
@@ -55,20 +49,32 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build -C Debug --output-on-failure
 
-      # Генерим отчёт покрытия и бейдж
+      # считаем покрытие ТОЛЬКО по твоему коду и делаем бейдж
       - name: Generate coverage report and badge
         run: |
-          # исключаем build/ и внешние зависимости
-          gcovr -r . -e "build/.*" -e ".*_deps/.*" --xml-pretty -o coverage.xml
+          gcovr -r . \
+            -e "build/.*" -e ".*_deps/.*" -e "tests/.*" \
+            -f "device\.cpp" \
+            --xml-pretty -o coverage.xml
           mkdir -p badges
           genbadge coverage -i coverage.xml -o badges/coverage.svg
 
-      # Коммитим бейдж обратно при push (для PR просто считаем, но не коммитим)
-      - name: Commit badge to repo
+      - name: Upload HTML coverage (optional)
+        run: |
+          gcovr -r . -e "build/.*" -e ".*_deps/.*" -e "tests/.*" -f "device\.cpp" \
+            --html --html-details -o coverage.html
+        # скачиваемый артефакт в ранe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: coverage.html
+
+      # автокоммит бейджа при push
+      - name: Commit badge
         if: github.event_name == 'push'
         run: |
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add badges/coverage.svg
-          git commit -m "chore(ci): update coverage badge [skip ci]" || echo "No changes to commit"
+          git commit -m "chore(ci): update coverage badge [skip ci]" || echo "no changes"
           git push
