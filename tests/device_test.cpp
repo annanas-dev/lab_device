@@ -9,9 +9,9 @@ static constexpr double EPS = 1e-2;
 
 // Мой тестик
 TEST(MixerGuards, NoOutputsExceptionMessage) {
-    stream_counter = 0;
+    streamcounter = 0;
     Mixer mixer(1);
-    shared_ptr<Stream> s1(new Stream(++stream_counter));
+    shared_ptr<Stream> s1(new Stream(++streamcounter));
     s1->setMassFlow(2.0);
     mixer.addInput(s1);
 
