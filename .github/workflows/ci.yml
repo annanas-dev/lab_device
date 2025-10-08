@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:            # триггер на каждый пуш в любую ветку
+    branches: [ "**" ]
+  pull_request:    # и на PR — полезно для проверок
+
+jobs:
+  test-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Конфигурируем CMake под MSVC x64
+      - name: Configure CMake (MSVC x64)
+        run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      # Сборка только цели с тестами (быстрее)
+      - name: Build tests
+        run: cmake --build build --config Release --target device_tests -- /m
+
+      # Прогон тестов. Если используешь gtest_discover_tests, добавь DISCOVERY_MODE PRE_TEST в CMakeLists.
+      - name: Run ctest
+        run: ctest --test-dir build -C Release --output-on-failure
